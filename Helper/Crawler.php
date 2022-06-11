@@ -13,7 +13,7 @@ class Crawler {
      *
      * Returns an array containing the html, response code, and the total time elapsed
      */
-    public function getPage(string $url,int $connectTimeout, int $timeout, string $maxRedirect): array
+    public function getPage(string $url,int $connectTimeout, int $timeout, int $maxRedirect): array
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -27,20 +27,25 @@ class Crawler {
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_ENCODING, self::ENCODING);
 
-        $curl = curl_exec($ch);
+        $html = curl_exec($ch);
+        curl_close($ch);
         $response = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $loadTime = curl_getinfo($ch, CURLINFO_TOTAL_TIME);
-        $html = file_get_contents($url);
 
-        return ['curl' => $curl, 'response' => $response, 'load_time' => $loadTime, 'html' => $html];
+        return ['html' => $html, 'response' => $response, 'load_time' => $loadTime];
     }
 
 
-    public function getAnchors(\DOMDocument $doc) : array
+    /*
+     * Gets all html anchors given a DomDocument
+     *
+     * Returns an array of links
+     */
+    public function getAnchors(\DOMDocument $dom) : array
     {
         $hrefs = array();
 
-        $anchors = $doc->getElementsByTagName('a');
+        $anchors = $dom->getElementsByTagName('a');
         foreach ($anchors as $anchor)
         {
             array_push($hrefs, $anchor->getAttribute('href'));
@@ -48,67 +53,62 @@ class Crawler {
         return $hrefs;
     }
 
-    public function parseData(\DOMDocument $doc) : array
+    /*
+     * Gets all html anchors given a DomDocument
+     *
+     * Returns an array of links separated into external and internal links.
+     */
+    public function getLinks(\DOMDocument $dom, string $url) : array
     {
-        $images = array();
         $iLinks = array();
         $eLinks = array();
-        $wordCount = 0;
-        $titles = array();
 
-        $imageElements = $doc->getElementsByTagName('img');
-        foreach ($imageElements as $imageElement)
-        {
-            if (!in_array($imageElement->nodeValue, $images))
-            {
-                array_push($images, $imageElement->nodeValue);
-            }
-        }
-    }
-
-    public function countLinks(\DOMNodeList $links, string $url) : array
-    {
-        $iLinks = 0;
-        $eLinks = 0;
+        $links = $dom->getElementsByTagName("a");
 
         foreach ($links as $link)
         {
             if (strpos($link->getAttribute('href'), $url)) {
-                $iLinks++;
+                array_push($iLinks, $link->getAttribute('href'));
             } else {
-                $eLinks++;
+                array_push($eLinks, $link->getAttribute('href'));
             }
         }
 
         return ['internal' => $iLinks, 'external' => $eLinks];
     }
 
-    public function countImages(\DOMNodeList $images) : int
+    /*
+     * Gets all img tags given a DOMDocument
+     * Does not account for SVGs
+     *
+     * Returns an array of image sources
+     */
+    public function getImages(\DOMDocument $dom) : array
     {
         $imageArray = array();
-
+        $images = $dom->getElementsByTagName("img");
         foreach ($images as $image)
         {
-            if (!in_array($image->getAttribute('src'), $imageArray)) {
-                array_push($imageArray, $image->getAttribute('src'));
-            }
+            array_push($imageArray, $image->getAttribute('src'));
         }
 
-        return count($imageArray);
+        return $imageArray;
     }
 
-    public function wordCount(string $html)
-    {
-        return (array_count_values(str_word_count(strip_tags(strtolower($html)), 1)));
-    }
 
-    public function getTitleLength(\DOMNodeList $doc) : int {
+
+    /*
+     * Gets the length of a title given a DOMDocument
+     *
+     * Returns the title length
+     */
+    public function getTitleLength(\DOMDocument $dom) : int {
         $title = '';
-        $list = $doc->getElementsByTagName("title");
+        $list = $dom->getElementsByTagName("title");
         if ($list->length > 0) {
             $title = $list->item(0)->textContent;
         }
-        return count($title);
+        return strlen($title);
     }
 
 
