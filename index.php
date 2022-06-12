@@ -93,5 +93,30 @@ $data['avgWordCount'] = $data['avgWordCount'] / $i;
 $data['avgPageLoad'] = $data['avgPageLoad'] / $i;
 $data['avgTitleLength'] = $data['avgTitleLength'] / $i;
 
+echo "<H1>AA Backend Challenge</H1>
+<div>
+    <ul>
+        <li>Number of pages crawled: <strong>" . $data['numPages'] . "</strong></li>
+        <li>Number of unique images: <strong>" . $data['numImages'] . "</strong></li>
+        <li>Number of unique internal links: <strong>" . $data['iLinks'] . "</strong></li>
+        <li>Number of unique external links: <strong>" . $data['eLinks'] . "</strong></li>
+        <li>Average page load in seconds: <strong>" . $data['avgPageLoad'] . "s</strong></li>
+        <li>Average word count: <strong>" . $data['avgWordCount'] . "</strong></li>
+        <li>Average title length: <strong>" . $data['avgTitleLength'] . "</strong></li>
+</ul>
+<table>
+    <th>URL</th>
+    <th>Status</th>
+    ";
+    foreach ($table as $row)
+    {
+        echo "<tr>";
+        echo "<td>" . $row['url'] . "</td>";
+        echo "<td>" . $row['status'] . "</td>";
+        echo "</tr>";
+    }
+echo "</table>
+</div>";
+
 
 
