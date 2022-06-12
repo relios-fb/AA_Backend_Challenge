@@ -13,7 +13,7 @@ class Crawler {
      *
      * Returns an array containing the html, response code, and the total time elapsed
      */
-    public function getPage(string $url,int $connectTimeout, int $timeout, int $maxRedirect): array
+    public static function getPage(string $url,int $connectTimeout, int $timeout, int $maxRedirect): array
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -28,27 +28,36 @@ class Crawler {
         curl_setopt($ch, CURLOPT_ENCODING, self::ENCODING);
 
         $html = curl_exec($ch);
-        curl_close($ch);
-        $response = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $loadTime = curl_getinfo($ch, CURLINFO_TOTAL_TIME);
 
+        $curlInfo = curl_getinfo($ch);
+        $response = $curlInfo['http_code'];
+        $loadTime = $curlInfo['total_time'];
+        curl_close($ch);
         return ['html' => $html, 'response' => $response, 'load_time' => $loadTime];
     }
 
 
     /*
-     * Gets all html anchors given a DomDocument
+     * Gets all anchors given a DomDocument
      *
      * Returns an array of links
      */
-    public function getAnchors(\DOMDocument $dom) : array
+    public static function getWebsiteAnchors(\DOMDocument $dom, string $baseUrl) : array
     {
         $hrefs = array();
 
         $anchors = $dom->getElementsByTagName('a');
         foreach ($anchors as $anchor)
         {
-            array_push($hrefs, $anchor->getAttribute('href'));
+            $url = $anchor->getAttribute('href');
+            $parse = parse_url($url);
+
+            if (!isset($parse['host'])) {
+                $path = isset($parse['path']) ? $parse['path'] : '';
+                $url = $baseUrl . $path;
+                $url = rtrim($url, '/\\');
+                array_push($hrefs, $url);
+            }
         }
         return $hrefs;
     }
@@ -58,16 +67,16 @@ class Crawler {
      *
      * Returns an array of links separated into external and internal links.
      */
-    public function getLinks(\DOMDocument $dom, string $url) : array
+    public static function getLinkTypes(\DOMDocument $dom, $baseUrl) : array
     {
         $iLinks = array();
         $eLinks = array();
 
-        $links = $dom->getElementsByTagName("a");
+        $links = $dom->getElementsByTagName("link");
 
         foreach ($links as $link)
         {
-            if (strpos($link->getAttribute('href'), $url)) {
+            if ($link->getAttribute('href')[0] == '/' || is_numeric(strpos($link->getAttribute('href'), $baseUrl)) ) {
                 array_push($iLinks, $link->getAttribute('href'));
             } else {
                 array_push($eLinks, $link->getAttribute('href'));
@@ -83,7 +92,7 @@ class Crawler {
      *
      * Returns an array of image sources
      */
-    public function getImages(\DOMDocument $dom) : array
+    public static function getImages(\DOMDocument $dom) : array
     {
         $imageArray = array();
         $images = $dom->getElementsByTagName("img");
@@ -102,7 +111,7 @@ class Crawler {
      *
      * Returns the title length
      */
-    public function getTitleLength(\DOMDocument $dom) : int {
+    public static function getTitleLength(\DOMDocument $dom) : int {
         $title = '';
         $list = $dom->getElementsByTagName("title");
         if ($list->length > 0) {
